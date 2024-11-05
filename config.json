@@ -1,0 +1,9 @@
+{
+  "api_key": "98292841ff81b7ccd803195a8177af5a",
+  "city": "Paris",
+  "kafka_topic": "weather-data",
+  "kafka_broker": "localhost:9092",
+  "interval": 60,
+  "cassandra_host": "localhost",
+  "cassandra_keyspace": "weather"
+}

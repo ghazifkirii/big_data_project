@@ -1,0 +1,133 @@
+version: '3.8'
+
+services:
+  zookeeper:
+    image: zookeeper:3.6  # Version de Zookeeper
+    ports:
+      - "2181:2181"
+
+  kafka:
+    image: bitnami/kafka:latest  # Utilisation de l'image Kafka de Bitnami
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092  # Modifier pour le réseau interne
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092  # Ecouter sur toutes les interfaces
+    depends_on:
+      - zookeeper
+
+  cassandra:
+    image: cassandra:latest  # Utilisation de la dernière image Cassandra
+    ports:
+      - "9042:9042"  # Port par défaut de Cassandra
+    environment:
+      CASSANDRA_CLUSTER_NAME: "Test Cluster"
+      CASSANDRA_SEEDS: cassandra  # Utilisation du seed par défaut
+    volumes:
+      - cassandra-data:/var/lib/cassandra
+    # Option pour s'assurer que Cassandra est prêt avant de lancer les autres services
+    healthcheck:
+      test: ["CMD", "cqlsh", "-e", "SHOW TABLES"]
+      interval: 10s
+      retries: 5
+      start_period: 20s
+      timeout: 10s
+
+  weather-analysis:
+    build:
+      context: .
+      dockerfile: Dockerfile  # Spécifiez un Dockerfile si vous en avez un, sinon vous pouvez ignorer cette section
+    volumes:
+      - .:/app  # Monte le répertoire courant dans /app du conteneur
+    working_dir: /app
+    command: bash -c "while ! nc -z kafka 9092; do echo 'Waiting for Kafka'; sleep 3; done; while ! nc -z cassandra 9042; do echo 'Waiting for Cassandra'; sleep 3; done; python process_data.py"  # Attendre que Kafka et Cassandra soient prêts avant de lancer le script
+    depends_on:
+      - kafka
+      - cassandra
+
+volumes:
+  cassandra-data:
+    driver: local
+
+
+
+# version: '3.8'
+
+# services:
+#   zookeeper:
+#     image: zookeeper:3.6  # Updated to a newer, supported Zookeeper version
+#     ports:
+#       - "2181:2181"
+
+#   kafka:
+#     image: bitnami/kafka:latest  # Replace with a newer Kafka image
+#     ports:
+#       - "9092:9092"
+#     environment:
+#       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+#       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+#     depends_on:
+#       - zookeeper
+
+#   cassandra:
+#     image: cassandra:latest  # Use the latest Cassandra image
+#     ports:
+#       - "9042:9042"  # Cassandra's default port
+#     environment:
+#       CASSANDRA_CLUSTER_NAME: "Test Cluster"
+#       CASSANDRA_SEEDS: cassandra  # Use the default seed
+#     volumes:
+#       - cassandra-data:/var/lib/cassandra
+
+#   # Service de traitement des données météo
+#   weather-analysis:
+#     image: python:3.9
+#     volumes:
+#       - .:/app  # Assurez-vous que le code de traitement est dans ce dossier
+#     working_dir: /app
+#     command: python process_data.py  # Un script Python qui interagit avec Kafka et Cassandra
+#     depends_on:
+#       - kafka
+#       - cassandra
+
+#   # Optionnel: Service pour exécuter Apache Spark pour les traitements en batch
+#   spark:
+#     image: liliasfaxi/spark-hadoop:hv-2.7.2
+#     ports:
+#       - "8080:8080"  # Port de l'interface Spark UI
+#     environment:
+#       - SPARK_MODE=cluster
+#     depends_on:
+#       - kafka
+#       - cassandra
+
+# volumes:
+#   cassandra-data:
+#     driver: local
+
+
+# services:
+#   zookeeper:
+#     image: zookeeper:3.6  # Updated to a newer, supported Zookeeper version
+#     ports:
+#       - "2181:2181"
+
+#   kafka:
+#     image: bitnami/kafka:latest  # Replace with a newer Kafka image
+#     ports:
+#       - "9092:9092"
+#     environment:
+#       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+#       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+#     depends_on:
+#       - zookeeper
+
+#   cassandra:
+#     image: cassandra:latest  # Use the latest Cassandra image
+#     ports:
+#       - "9042:9042"  # Cassandra's default port
+#     environment:
+#       CASSANDRA_CLUSTER_NAME: "Test Cluster"
+#       CASSANDRA_SEEDS: cassandra  # Use the default seed
